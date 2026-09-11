@@ -29,6 +29,7 @@ const sidebarTitleEl = document.getElementById("sidebar-title");
 const sidebarSearchInputEl = document.getElementById("sidebar-search-input");
 const toggleSidebarButton = document.getElementById("toggle-sidebar-button");
 const scopeDiffButton = document.getElementById("scope-diff-button");
+const scopeBranchDiffButton = document.getElementById("scope-branch-diff-button");
 const scopeLastCommitButton = document.getElementById("scope-last-commit-button");
 const scopeCommitButton = document.getElementById("scope-commit-button");
 const scopeAllButton = document.getElementById("scope-all-button");
@@ -92,6 +93,7 @@ function inferLanguage(path) {
 function scopeLabel(scope) {
   switch (scope) {
     case "git-diff": return "Git diff";
+    case "branch-diff": return "Branch diff";
     case "last-commit": return "Last commit";
     case "commit": return "Commit history";
     default: return "All files";
@@ -102,6 +104,8 @@ function scopeHint(scope) {
   switch (scope) {
     case "git-diff":
       return "Review working tree changes against HEAD. Hover or click line numbers in the gutter to add an inline comment.";
+    case "branch-diff":
+      return "Review all branch changes since it diverged from main, including uncommitted changes. Hover or click line numbers in the gutter to add an inline comment.";
     case "last-commit":
       return "Review the last commit against its parent. Hover or click line numbers in the gutter to add an inline comment.";
     case "commit":
@@ -133,6 +137,8 @@ function getScopedFiles() {
   switch (state.currentScope) {
     case "git-diff":
       return reviewData.files.filter((file) => file.inGitDiff);
+    case "branch-diff":
+      return reviewData.files.filter((file) => file.inBranchDiff);
     case "last-commit":
       return reviewData.files.filter((file) => file.inLastCommit);
     case "commit":
@@ -161,6 +167,7 @@ function activeFile() {
 function getScopeComparison(file, scope = state.currentScope) {
   if (!file) return null;
   if (scope === "git-diff") return file.gitDiff;
+  if (scope === "branch-diff") return file.branchDiff;
   if (scope === "last-commit") return file.lastCommit;
   if (scope === "commit") return state.selectedCommitSha ? file.commitComparisons?.[state.selectedCommitSha] ?? null : null;
   return null;
@@ -493,6 +500,7 @@ function updateSidebarLayout() {
 function updateScopeButtons() {
   const counts = {
     diff: reviewData.files.filter((file) => file.inGitDiff).length,
+    branchDiff: reviewData.files.filter((file) => file.inBranchDiff).length,
     lastCommit: reviewData.files.filter((file) => file.inLastCommit).length,
     commit: state.selectedCommitSha ? reviewData.files.filter((file) => file.commitComparisons?.[state.selectedCommitSha]).length : 0,
     all: reviewData.files.filter((file) => file.hasWorkingTreeFile).length,
@@ -508,11 +516,13 @@ function updateScopeButtons() {
   };
 
   scopeDiffButton.textContent = `Git diff${counts.diff > 0 ? ` (${counts.diff})` : ""}`;
+  scopeBranchDiffButton.textContent = `Branch from main${counts.branchDiff > 0 ? ` (${counts.branchDiff})` : ""}`;
   scopeLastCommitButton.textContent = `Last commit${counts.lastCommit > 0 ? ` (${counts.lastCommit})` : ""}`;
   scopeCommitButton.textContent = `Commits${counts.commit > 0 ? ` (${counts.commit})` : ""}`;
   scopeAllButton.textContent = `All files${counts.all > 0 ? ` (${counts.all})` : ""}`;
 
   applyButtonClasses(scopeDiffButton, state.currentScope === "git-diff", counts.diff === 0);
+  applyButtonClasses(scopeBranchDiffButton, state.currentScope === "branch-diff", counts.branchDiff === 0);
   applyButtonClasses(scopeLastCommitButton, state.currentScope === "last-commit", counts.lastCommit === 0);
   applyButtonClasses(scopeCommitButton, state.currentScope === "commit", !state.selectedCommitSha || counts.commit === 0);
   applyButtonClasses(scopeAllButton, state.currentScope === "all-files", counts.all === 0);
@@ -1046,6 +1056,7 @@ function populateCommitSelect() {
 function switchScope(scope) {
   const hasScopeFiles = {
     "git-diff": reviewData.files.some((file) => file.inGitDiff),
+    "branch-diff": reviewData.files.some((file) => file.inBranchDiff),
     "last-commit": reviewData.files.some((file) => file.inLastCommit),
     "commit": !!state.selectedCommitSha && reviewData.files.some((file) => file.commitComparisons?.[state.selectedCommitSha]),
     "all-files": reviewData.files.some((file) => file.hasWorkingTreeFile),
@@ -1110,6 +1121,10 @@ toggleReviewedButton.addEventListener("click", () => {
 
 scopeDiffButton.addEventListener("click", () => {
   switchScope("git-diff");
+});
+
+scopeBranchDiffButton.addEventListener("click", () => {
+  switchScope("branch-diff");
 });
 
 scopeLastCommitButton.addEventListener("click", () => {

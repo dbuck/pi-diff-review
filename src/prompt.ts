@@ -3,6 +3,7 @@ import type { DiffReviewComment, ReviewFile, ReviewScope, ReviewSubmitPayload } 
 function formatScopeLabel(scope: ReviewScope): string {
   switch (scope) {
     case "git-diff": return "git diff";
+    case "branch-diff": return "branch diff from main";
     case "last-commit": return "last commit";
     case "commit": return "commit";
     default: return "all files";
@@ -13,7 +14,9 @@ function getCommentFilePath(file: ReviewFile | undefined, comment: DiffReviewCom
   if (file == null) return "(unknown file)";
   const comparison = comment.scope === "git-diff"
     ? file.gitDiff
-    : comment.scope === "last-commit"
+    : comment.scope === "branch-diff"
+      ? file.branchDiff
+      : comment.scope === "last-commit"
       ? file.lastCommit
       : comment.scope === "commit" && comment.commitSha
         ? file.commitComparisons[comment.commitSha]
