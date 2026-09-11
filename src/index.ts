@@ -1,12 +1,13 @@
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import { Key, matchesKey, truncateToWidth } from "@earendil-works/pi-tui";
 import { open, type GlimpseWindow } from "glimpseui";
-import { getReviewWindowData, loadReviewFileContents } from "./git.js";
+import { getReviewFileFingerprint, getReviewWindowData, loadReviewFileContents, loadReviewState, saveReviewState } from "./git.js";
 import { composeReviewPrompt } from "./prompt.js";
 import type {
   ReviewCancelPayload,
   ReviewFile,
   ReviewFileContents,
+  ReviewFileStatusPayload,
   ReviewHostMessage,
   ReviewRequestFilePayload,
   ReviewScopeSelectedPayload,
@@ -29,6 +30,10 @@ function isRequestFilePayload(value: ReviewWindowMessage): value is ReviewReques
 
 function isScopeSelectedPayload(value: ReviewWindowMessage): value is ReviewScopeSelectedPayload {
   return value.type === "scope-selected";
+}
+
+function isFileStatusPayload(value: ReviewWindowMessage): value is ReviewFileStatusPayload {
+  return value.type === "file-review-status";
 }
 
 type WaitingEditorResult = "escape" | "window-settled";
@@ -129,7 +134,15 @@ export default function (pi: ExtensionAPI) {
       return;
     }
 
-    const html = buildReviewHtml({ repoRoot, files, commits, branchBaseSha, initialScope: preferredScope });
+    const reviewState = await loadReviewState(pi, repoRoot);
+    const reviewedFiles: Record<string, boolean> = {};
+    for (const file of files) {
+      const savedFingerprint = reviewState.reviewedFiles[file.id];
+      if (savedFingerprint == null) continue;
+      reviewedFiles[file.id] = savedFingerprint === await getReviewFileFingerprint(pi, repoRoot, file);
+    }
+
+    const html = buildReviewHtml({ repoRoot, files, commits, branchBaseSha, initialScope: preferredScope, reviewedFiles });
     const window = open(html, {
       width: 1680,
       height: 1020,
@@ -140,6 +153,7 @@ export default function (pi: ExtensionAPI) {
     const waitingUI = showWaitingUI(ctx);
     const fileMap = new Map(files.map((file) => [file.id, file]));
     const contentCache = new Map<string, Promise<ReviewFileContents>>();
+    let reviewStateRevision = 0;
 
     const sendWindowMessage = (message: ReviewHostMessage): void => {
       if (activeWindow !== window) return;
@@ -217,6 +231,20 @@ export default function (pi: ExtensionAPI) {
           }
         };
 
+        const handleFileStatus = async (message: ReviewFileStatusPayload): Promise<void> => {
+          const revision = ++reviewStateRevision;
+          if (message.reviewed) {
+            const file = fileMap.get(message.fileId);
+            if (file == null) return;
+            const fingerprint = await getReviewFileFingerprint(pi, repoRoot, file);
+            if (revision !== reviewStateRevision) return;
+            reviewState.reviewedFiles[file.id] = fingerprint;
+          } else {
+            delete reviewState.reviewedFiles[message.fileId];
+          }
+          await saveReviewState(reviewState);
+        };
+
         const onMessage = (data: unknown): void => {
           const message = data as ReviewWindowMessage;
           if (isRequestFilePayload(message)) {
@@ -227,6 +255,12 @@ export default function (pi: ExtensionAPI) {
             if (message.scope === "branch-diff" || message.scope === "last-commit") {
               preferredScope = message.scope;
             }
+            return;
+          }
+          if (isFileStatusPayload(message)) {
+            void handleFileStatus(message).catch(() => {
+              ctx.ui.notify("Could not save reviewed-file state.", "warning");
+            });
             return;
           }
           if (isSubmitPayload(message) || isCancelPayload(message)) {

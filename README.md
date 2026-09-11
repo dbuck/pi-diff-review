@@ -22,9 +22,10 @@ The command:
    - The last selected **Branch from main** or **Last commit** scope opens by default the next time you run `/diff-review` in the same Pi session
 3. shows a collapsible sidebar with fuzzy file search
 4. shows git status markers in the sidebar for changed files and untracked files
-5. lazy-loads file contents on demand as you switch files and scopes
-6. lets you draft comments on the original side, modified side, or whole file
-7. inserts the resulting feedback prompt into the pi editor when you submit
+5. persists reviewed-file markers in the repository's Git metadata; a marker is restored only while the file's contents are unchanged
+6. lazy-loads file contents on demand as you switch files and scopes
+7. lets you draft comments on the original side, modified side, or whole file
+8. inserts the resulting feedback prompt into the pi editor when you submit
 
 ## Requirements
 

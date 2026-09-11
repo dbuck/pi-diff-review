@@ -24,7 +24,7 @@ const state = {
   hideUnchanged: false,
   wrapLines: true,
   collapsedDirs: {},
-  reviewedFiles: {},
+  reviewedFiles: reviewData.reviewedFiles || {},
   scrollPositions: {},
   sidebarCollapsed: false,
   fileFilter: "",
@@ -1129,7 +1129,11 @@ toggleWrapButton.addEventListener("click", () => {
 toggleReviewedButton.addEventListener("click", () => {
   const file = activeFile();
   if (!file) return;
-  state.reviewedFiles[file.id] = !isFileReviewed(file.id);
+  const reviewed = !isFileReviewed(file.id);
+  state.reviewedFiles[file.id] = reviewed;
+  if (window.glimpse?.send) {
+    window.glimpse.send({ type: "file-review-status", fileId: file.id, reviewed });
+  }
   renderTree();
 });
 

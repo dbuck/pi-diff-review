@@ -1,5 +1,5 @@
-import { readFile } from "node:fs/promises";
-import { extname, join } from "node:path";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { dirname, extname, isAbsolute, join, resolve } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import type { ChangeStatus, ReviewFile, ReviewFileComparison, ReviewFileContents, ReviewScope } from "./types.js";
 
@@ -7,6 +7,11 @@ interface ChangedPath {
   status: ChangeStatus;
   oldPath: string | null;
   newPath: string | null;
+}
+
+export interface ReviewState {
+  storagePath: string;
+  reviewedFiles: Record<string, string>;
 }
 
 interface ReviewFileSeed {
@@ -45,6 +50,38 @@ export async function getRepoRoot(pi: ExtensionAPI, cwd: string): Promise<string
     throw new Error("Not inside a git repository.");
   }
   return result.stdout.trim();
+}
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+  if (typeof value !== "object" || value == null || Array.isArray(value)) return false;
+  return Object.values(value).every((entry) => typeof entry === "string");
+}
+
+export async function loadReviewState(pi: ExtensionAPI, repoRoot: string): Promise<ReviewState> {
+  const storagePathResult = await runGitAllowFailure(pi, repoRoot, ["rev-parse", "--git-path", "info/pi-diff-review.json"]);
+  const gitPath = storagePathResult.trim();
+  const storagePath = isAbsolute(gitPath) ? gitPath : resolve(repoRoot, gitPath);
+
+  try {
+    const parsed: unknown = JSON.parse(await readFile(storagePath, "utf8"));
+    if (typeof parsed === "object" && parsed != null && !Array.isArray(parsed) && "reviewedFiles" in parsed && isStringRecord(parsed.reviewedFiles)) {
+      return { storagePath, reviewedFiles: parsed.reviewedFiles };
+    }
+  } catch {}
+
+  return { storagePath, reviewedFiles: {} };
+}
+
+export async function saveReviewState(state: ReviewState): Promise<void> {
+  await mkdir(dirname(state.storagePath), { recursive: true });
+  await writeFile(state.storagePath, `${JSON.stringify({ reviewedFiles: state.reviewedFiles }, null, 2)}\n`);
+}
+
+export async function getReviewFileFingerprint(pi: ExtensionAPI, repoRoot: string, file: ReviewFile): Promise<string> {
+  if (!file.hasWorkingTreeFile) return `missing:${file.id}`;
+
+  const hash = (await runGitAllowFailure(pi, repoRoot, ["hash-object", "--no-filters", "--", file.path])).trim();
+  return hash.length > 0 ? `content:${hash}` : `missing:${file.id}`;
 }
 
 async function hasHead(pi: ExtensionAPI, repoRoot: string): Promise<boolean> {

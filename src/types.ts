@@ -64,6 +64,12 @@ export interface ReviewScopeSelectedPayload {
   scope: ReviewScope;
 }
 
+export interface ReviewFileStatusPayload {
+  type: "file-review-status";
+  fileId: string;
+  reviewed: boolean;
+}
+
 export interface ReviewRequestFilePayload {
   type: "request-file";
   requestId: string;
@@ -72,7 +78,7 @@ export interface ReviewRequestFilePayload {
   commitSha?: string;
 }
 
-export type ReviewWindowMessage = ReviewSubmitPayload | ReviewCancelPayload | ReviewScopeSelectedPayload | ReviewRequestFilePayload;
+export type ReviewWindowMessage = ReviewSubmitPayload | ReviewCancelPayload | ReviewScopeSelectedPayload | ReviewFileStatusPayload | ReviewRequestFilePayload;
 
 export interface ReviewFileDataMessage {
   type: "file-data";
@@ -101,4 +107,5 @@ export interface ReviewWindowData {
   commits: ReviewCommit[];
   branchBaseSha: string | null;
   initialScope: ReviewScope | null;
+  reviewedFiles: Record<string, boolean>;
 }
