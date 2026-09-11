@@ -21,7 +21,7 @@ const state = {
   currentScope: getInitialScope(),
   comments: [],
   overallComment: "",
-  hideUnchanged: false,
+  hideUnchanged: reviewData.hideUnchanged === true,
   wrapLines: true,
   collapsedDirs: {},
   reviewedFiles: reviewData.reviewedFiles || {},
@@ -1111,6 +1111,9 @@ fileCommentButton.addEventListener("click", () => {
 
 toggleUnchangedButton.addEventListener("click", () => {
   state.hideUnchanged = !state.hideUnchanged;
+  if (window.glimpse?.send) {
+    window.glimpse.send({ type: "display-options", hideUnchanged: state.hideUnchanged });
+  }
   applyEditorOptions();
   updateToggleButtons();
   requestAnimationFrame(layoutEditor);

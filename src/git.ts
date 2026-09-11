@@ -12,6 +12,7 @@ interface ChangedPath {
 export interface ReviewState {
   storagePath: string;
   reviewedFiles: Record<string, string>;
+  hideUnchanged: boolean;
 }
 
 interface ReviewFileSeed {
@@ -57,6 +58,11 @@ function isStringRecord(value: unknown): value is Record<string, string> {
   return Object.values(value).every((entry) => typeof entry === "string");
 }
 
+function isStoredReviewState(value: unknown): value is { reviewedFiles: Record<string, string>; hideUnchanged?: boolean } {
+  if (typeof value !== "object" || value == null || Array.isArray(value) || !("reviewedFiles" in value)) return false;
+  return isStringRecord(value.reviewedFiles) && (!("hideUnchanged" in value) || typeof value.hideUnchanged === "boolean");
+}
+
 export async function loadReviewState(pi: ExtensionAPI, repoRoot: string): Promise<ReviewState> {
   const storagePathResult = await runGitAllowFailure(pi, repoRoot, ["rev-parse", "--git-path", "info/pi-diff-review.json"]);
   const gitPath = storagePathResult.trim();
@@ -64,17 +70,24 @@ export async function loadReviewState(pi: ExtensionAPI, repoRoot: string): Promi
 
   try {
     const parsed: unknown = JSON.parse(await readFile(storagePath, "utf8"));
-    if (typeof parsed === "object" && parsed != null && !Array.isArray(parsed) && "reviewedFiles" in parsed && isStringRecord(parsed.reviewedFiles)) {
-      return { storagePath, reviewedFiles: parsed.reviewedFiles };
+    if (isStoredReviewState(parsed)) {
+      return {
+        storagePath,
+        reviewedFiles: parsed.reviewedFiles,
+        hideUnchanged: parsed.hideUnchanged ?? false,
+      };
     }
   } catch {}
 
-  return { storagePath, reviewedFiles: {} };
+  return { storagePath, reviewedFiles: {}, hideUnchanged: false };
 }
 
 export async function saveReviewState(state: ReviewState): Promise<void> {
   await mkdir(dirname(state.storagePath), { recursive: true });
-  await writeFile(state.storagePath, `${JSON.stringify({ reviewedFiles: state.reviewedFiles }, null, 2)}\n`);
+  await writeFile(state.storagePath, `${JSON.stringify({
+    reviewedFiles: state.reviewedFiles,
+    hideUnchanged: state.hideUnchanged,
+  }, null, 2)}\n`);
 }
 
 export async function getReviewFileFingerprint(pi: ExtensionAPI, repoRoot: string, file: ReviewFile): Promise<string> {

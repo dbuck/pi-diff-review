@@ -5,6 +5,7 @@ import { getReviewFileFingerprint, getReviewWindowData, loadReviewFileContents, 
 import { composeReviewPrompt } from "./prompt.js";
 import type {
   ReviewCancelPayload,
+  ReviewDisplayOptionsPayload,
   ReviewFile,
   ReviewFileContents,
   ReviewFileStatusPayload,
@@ -34,6 +35,10 @@ function isScopeSelectedPayload(value: ReviewWindowMessage): value is ReviewScop
 
 function isFileStatusPayload(value: ReviewWindowMessage): value is ReviewFileStatusPayload {
   return value.type === "file-review-status";
+}
+
+function isDisplayOptionsPayload(value: ReviewWindowMessage): value is ReviewDisplayOptionsPayload {
+  return value.type === "display-options";
 }
 
 type WaitingEditorResult = "escape" | "window-settled";
@@ -142,7 +147,15 @@ export default function (pi: ExtensionAPI) {
       reviewedFiles[file.id] = savedFingerprint === await getReviewFileFingerprint(pi, repoRoot, file);
     }
 
-    const html = buildReviewHtml({ repoRoot, files, commits, branchBaseSha, initialScope: preferredScope, reviewedFiles });
+    const html = buildReviewHtml({
+      repoRoot,
+      files,
+      commits,
+      branchBaseSha,
+      initialScope: preferredScope,
+      reviewedFiles,
+      hideUnchanged: reviewState.hideUnchanged,
+    });
     const window = open(html, {
       width: 1680,
       height: 1020,
@@ -260,6 +273,13 @@ export default function (pi: ExtensionAPI) {
           if (isFileStatusPayload(message)) {
             void handleFileStatus(message).catch(() => {
               ctx.ui.notify("Could not save reviewed-file state.", "warning");
+            });
+            return;
+          }
+          if (isDisplayOptionsPayload(message)) {
+            reviewState.hideUnchanged = message.hideUnchanged;
+            void saveReviewState(reviewState).catch(() => {
+              ctx.ui.notify("Could not save display options.", "warning");
             });
             return;
           }
