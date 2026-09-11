@@ -122,10 +122,10 @@ function statusLabel(status) {
 
 function statusBadgeClass(status) {
   switch (status) {
-    case "added": return "text-[#3fb950]";
-    case "deleted": return "text-[#f85149]";
-    case "renamed": return "text-[#d29922]";
-    default: return "text-[#58a6ff]";
+    case "added": return "text-[#1a7f37]";
+    case "deleted": return "text-[#cf222e]";
+    case "renamed": return "text-[#9a6700]";
+    default: return "text-[#0969da]";
   }
 }
 
@@ -406,10 +406,10 @@ function renderTreeNode(node, depth) {
       const collapsed = state.collapsedDirs[child.path] === true;
       const row = document.createElement("button");
       row.type = "button";
-      row.className = "group flex w-full items-center gap-1.5 px-2 py-1 text-left text-[13px] text-[#c9d1d9] hover:bg-[#21262d]";
+      row.className = "group flex w-full items-center gap-1.5 px-2 py-1 text-left text-[13px] text-[#1f2328] hover:bg-[#eaeef2]";
       row.style.paddingLeft = `${depth * indentPx + 8}px`;
       row.innerHTML = `
-        <svg class="h-4 w-4 shrink-0 text-[#8b949e] transition-transform ${collapsed ? "-rotate-90" : ""}" viewBox="0 0 16 16" fill="currentColor">
+        <svg class="h-4 w-4 shrink-0 text-[#57606a] transition-transform ${collapsed ? "-rotate-90" : ""}" viewBox="0 0 16 16" fill="currentColor">
           <path d="M12.78 6.22a.749.749 0 0 1 0 1.06l-4.25 4.25a.749.749 0 0 1-1.06 0L3.22 7.28a.749.749 0 0 1 1.06-1.06L8 9.939l3.72-3.719a.749.749 0 0 1 1.06 0Z"></path>
         </svg>
         <span class="truncate">${escapeHtml(child.name)}</span>
@@ -434,16 +434,16 @@ function renderTreeNode(node, depth) {
     button.type = "button";
     button.className = [
       "group flex w-full items-center justify-between gap-2 px-2 py-1 text-left text-[13px]",
-      file.id === state.activeFileId ? "bg-[#373e47] text-white" : reviewed ? "text-[#c9d1d9] hover:bg-[#21262d]" : "text-[#8b949e] hover:bg-[#21262d] hover:text-[#c9d1d9]",
+      file.id === state.activeFileId ? "bg-[#ddf4ff] text-[#1f2328]" : reviewed ? "text-[#1f2328] hover:bg-[#eaeef2]" : "text-[#57606a] hover:bg-[#eaeef2] hover:text-[#1f2328]",
     ].join(" ");
     button.style.paddingLeft = `${(depth * indentPx) + 26}px`;
     button.innerHTML = `
       <span class="flex min-w-0 items-center gap-1.5 truncate ${file.id === state.activeFileId ? "font-medium" : ""}">
-        <span class="shrink-0 text-[10px] ${reviewed ? "text-[#3fb950]" : errored ? "text-red-400" : loading ? "text-[#58a6ff]" : "text-transparent"}">${reviewed ? "●" : errored ? "!" : loading ? "…" : "●"}</span>
+        <span class="shrink-0 text-[10px] ${reviewed ? "text-[#1a7f37]" : errored ? "text-red-400" : loading ? "text-[#0969da]" : "text-transparent"}">${reviewed ? "●" : errored ? "!" : loading ? "…" : "●"}</span>
         <span class="truncate">${escapeHtml(child.name)}</span>
       </span>
       <span class="flex shrink-0 items-center gap-1.5">
-        ${count > 0 ? `<span class="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#1f2937] px-1 text-[10px] font-medium text-[#c9d1d9]">${count}</span>` : ""}
+        ${count > 0 ? `<span class="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#ddf4ff] px-1 text-[10px] font-medium text-[#1f2328]">${count}</span>` : ""}
         ${status ? `<span class="font-medium ${statusBadgeClass(status)}">${escapeHtml(statusLabel(status).charAt(0))}</span>` : ""}
       </span>
     `;
@@ -467,18 +467,18 @@ function renderSearchResults(files) {
     button.type = "button";
     button.className = [
       "group flex w-full items-center justify-between gap-3 rounded-md px-2 py-2 text-left",
-      file.id === state.activeFileId ? "bg-[#373e47] text-white" : "text-[#c9d1d9] hover:bg-[#21262d]",
+      file.id === state.activeFileId ? "bg-[#ddf4ff] text-[#1f2328]" : "text-[#1f2328] hover:bg-[#eaeef2]",
     ].join(" ");
     button.innerHTML = `
       <span class="min-w-0 flex-1">
         <span class="flex items-center gap-1.5">
-          <span class="shrink-0 text-[10px] ${reviewed ? "text-[#3fb950]" : errored ? "text-red-400" : loading ? "text-[#58a6ff]" : "text-transparent"}">${reviewed ? "●" : errored ? "!" : loading ? "…" : "●"}</span>
+          <span class="shrink-0 text-[10px] ${reviewed ? "text-[#1a7f37]" : errored ? "text-red-400" : loading ? "text-[#0969da]" : "text-transparent"}">${reviewed ? "●" : errored ? "!" : loading ? "…" : "●"}</span>
           <span class="truncate text-[13px] ${file.id === state.activeFileId ? "font-medium" : ""}">${escapeHtml(baseName)}</span>
         </span>
-        <span class="mt-0.5 block truncate pl-[14px] text-[11px] ${file.id === state.activeFileId ? "text-[#c9d1d9]" : "text-review-muted"}">${escapeHtml(parentPath || path)}</span>
+        <span class="mt-0.5 block truncate pl-[14px] text-[11px] ${file.id === state.activeFileId ? "text-[#1f2328]" : "text-review-muted"}">${escapeHtml(parentPath || path)}</span>
       </span>
       <span class="flex shrink-0 items-center gap-1.5">
-        ${count > 0 ? `<span class="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#1f2937] px-1 text-[10px] font-medium text-[#c9d1d9]">${count}</span>` : ""}
+        ${count > 0 ? `<span class="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#ddf4ff] px-1 text-[10px] font-medium text-[#1f2328]">${count}</span>` : ""}
         ${status ? `<span class="font-medium ${statusBadgeClass(status)}">${escapeHtml(statusLabel(status).charAt(0))}</span>` : ""}
       </span>
     `;
@@ -509,10 +509,10 @@ function updateScopeButtons() {
   const applyButtonClasses = (button, active, disabled) => {
     button.disabled = disabled;
     button.className = disabled
-      ? "cursor-default rounded-md border border-review-border bg-[#11161d] px-2.5 py-1 text-[11px] font-medium text-review-muted opacity-60"
+      ? "cursor-default rounded-md border border-review-border bg-[#f6f8fa] px-2.5 py-1 text-[11px] font-medium text-review-muted opacity-60"
       : active
-        ? "cursor-pointer rounded-md border border-[#2ea043]/40 bg-[#238636]/15 px-2.5 py-1 text-[11px] font-medium text-[#3fb950] hover:bg-[#238636]/25"
-        : "cursor-pointer rounded-md border border-review-border bg-review-panel px-2.5 py-1 text-[11px] font-medium text-review-text hover:bg-[#21262d]";
+        ? "cursor-pointer rounded-md border border-[#1a7f37]/40 bg-[#1f883d]/15 px-2.5 py-1 text-[11px] font-medium text-[#1a7f37] hover:bg-[#1f883d]/25"
+        : "cursor-pointer rounded-md border border-review-border bg-review-panel px-2.5 py-1 text-[11px] font-medium text-review-text hover:bg-[#eaeef2]";
   };
 
   scopeDiffButton.textContent = `Git diff${counts.diff > 0 ? ` (${counts.diff})` : ""}`;
@@ -537,8 +537,8 @@ function updateToggleButtons() {
   const reviewed = file ? isFileReviewed(file.id) : false;
   toggleReviewedButton.textContent = reviewed ? "Reviewed" : "Mark reviewed";
   toggleReviewedButton.className = reviewed
-    ? "cursor-pointer rounded-md border border-[#2ea043]/40 bg-[#238636]/15 px-3 py-1 text-xs font-medium text-[#3fb950] hover:bg-[#238636]/25"
-    : "cursor-pointer rounded-md border border-review-border bg-review-panel px-3 py-1 text-xs font-medium text-review-text hover:bg-[#21262d]";
+    ? "cursor-pointer rounded-md border border-[#1a7f37]/40 bg-[#1f883d]/15 px-3 py-1 text-xs font-medium text-[#1a7f37] hover:bg-[#1f883d]/25"
+    : "cursor-pointer rounded-md border border-review-border bg-review-panel px-3 py-1 text-xs font-medium text-review-text hover:bg-[#eaeef2]";
   toggleWrapButton.textContent = `Wrap lines: ${state.wrapLines ? "on" : "off"}`;
   toggleUnchangedButton.textContent = state.hideUnchanged ? "Show full file" : "Show changed areas only";
   toggleUnchangedButton.style.display = activeFileShowsDiff() ? "inline-flex" : "none";
@@ -597,12 +597,12 @@ function showTextModal(options) {
   backdrop.className = "review-modal-backdrop";
   backdrop.innerHTML = `
     <div class="review-modal-card">
-      <div class="mb-2 text-base font-semibold text-white">${escapeHtml(options.title)}</div>
+      <div class="mb-2 text-base font-semibold text-review-text">${escapeHtml(options.title)}</div>
       <div class="mb-4 text-sm text-review-muted">${escapeHtml(options.description)}</div>
-      <textarea id="review-modal-text" class="scrollbar-thin min-h-48 w-full resize-y rounded-md border border-review-border bg-[#010409] px-3 py-2 text-sm text-review-text outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">${escapeHtml(options.initialValue ?? "")}</textarea>
+      <textarea id="review-modal-text" class="scrollbar-thin min-h-48 w-full resize-y rounded-md border border-review-border bg-[#ffffff] px-3 py-2 text-sm text-review-text outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">${escapeHtml(options.initialValue ?? "")}</textarea>
       <div class="mt-4 flex justify-end gap-2">
-        <button id="review-modal-cancel" class="cursor-pointer rounded-md border border-review-border bg-review-panel px-4 py-2 text-sm font-medium text-review-text hover:bg-[#21262d]">Cancel</button>
-        <button id="review-modal-save" class="cursor-pointer rounded-md border border-[rgba(240,246,252,0.1)] bg-[#238636] px-4 py-2 text-sm font-medium text-white hover:bg-[#2ea043]">${escapeHtml(options.saveLabel ?? "Save")}</button>
+        <button id="review-modal-cancel" class="cursor-pointer rounded-md border border-review-border bg-review-panel px-4 py-2 text-sm font-medium text-review-text hover:bg-[#eaeef2]">Cancel</button>
+        <button id="review-modal-save" class="cursor-pointer rounded-md border border-[rgba(240,246,252,0.1)] bg-[#1f883d] px-4 py-2 text-sm font-medium text-white hover:bg-[#1a7f37]">${escapeHtml(options.saveLabel ?? "Save")}</button>
       </div>
     </div>
   `;
@@ -692,7 +692,7 @@ function renderCommentDOM(comment, onDelete) {
       <div class="text-xs font-semibold text-review-text">${escapeHtml(title)}</div>
       <button data-action="delete" class="cursor-pointer rounded-md border border-transparent bg-transparent px-2 py-1 text-xs font-medium text-review-muted hover:bg-red-500/10 hover:text-red-400">Delete</button>
     </div>
-    <textarea data-comment-id="${escapeHtml(comment.id)}" class="scrollbar-thin min-h-[76px] w-full resize-y rounded-md border border-review-border bg-[#010409] px-3 py-2 text-sm text-review-text outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" placeholder="Leave a comment"></textarea>
+    <textarea data-comment-id="${escapeHtml(comment.id)}" class="scrollbar-thin min-h-[76px] w-full resize-y rounded-md border border-review-border bg-[#ffffff] px-3 py-2 text-sm text-review-text outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" placeholder="Leave a comment"></textarea>
   `;
   const textarea = container.querySelector("textarea");
   textarea.value = comment.body || "";
@@ -788,7 +788,7 @@ function renderFileComments() {
     return;
   }
 
-  fileCommentsContainer.className = "border-b border-review-border bg-[#0d1117] px-4 py-4 space-y-4";
+  fileCommentsContainer.className = "border-b border-review-border bg-[#f6f8fa] px-4 py-4 space-y-4";
   fileComments.forEach((comment) => {
     const dom = renderCommentDOM(comment, () => {
       state.comments = state.comments.filter((item) => item.id !== comment.id);
@@ -993,17 +993,18 @@ function setupMonaco() {
   window.require(["vs/editor/editor.main"], function () {
     monacoApi = window.monaco;
 
-    monacoApi.editor.defineTheme("review-dark", {
-      base: "vs-dark",
+    monacoApi.editor.defineTheme("review-light", {
+      base: "vs",
       inherit: true,
       rules: [],
       colors: {
-        "editor.background": "#0d1117",
-        "diffEditor.insertedTextBackground": "#2ea04326",
-        "diffEditor.removedTextBackground": "#f8514926",
+        "editor.background": "#ffffff",
+        "editorGutter.background": "#ffffff",
+        "diffEditor.insertedTextBackground": "#dafbe1",
+        "diffEditor.removedTextBackground": "#ffebe9",
       },
     });
-    monacoApi.editor.setTheme("review-dark");
+    monacoApi.editor.setTheme("review-light");
 
     diffEditor = monacoApi.editor.createDiffEditor(editorContainerEl, {
       automaticLayout: true,
