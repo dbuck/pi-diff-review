@@ -19,6 +19,7 @@ The command:
 1. opens a native review window
 2. lets you switch between working-tree, branch-from-main, commit, and all-files scopes
    - **Branch from main** compares the current working tree with the merge base of the current branch and `main` (falling back to `origin/main`), so it includes every change on the branch plus uncommitted and untracked changes
+   - The last selected **Branch from main** or **Last commit** scope opens by default the next time you run `/diff-review` in the same Pi session
 3. shows a collapsible sidebar with fuzzy file search
 4. shows git status markers in the sidebar for changed files and untracked files
 5. lazy-loads file contents on demand as you switch files and scopes

@@ -9,6 +9,7 @@ import type {
   ReviewFileContents,
   ReviewHostMessage,
   ReviewRequestFilePayload,
+  ReviewScopeSelectedPayload,
   ReviewSubmitPayload,
   ReviewWindowMessage,
 } from "./types.js";
@@ -26,6 +27,10 @@ function isRequestFilePayload(value: ReviewWindowMessage): value is ReviewReques
   return value.type === "request-file";
 }
 
+function isScopeSelectedPayload(value: ReviewWindowMessage): value is ReviewScopeSelectedPayload {
+  return value.type === "scope-selected";
+}
+
 type WaitingEditorResult = "escape" | "window-settled";
 
 function escapeForInlineScript(value: string): string {
@@ -35,6 +40,7 @@ function escapeForInlineScript(value: string): string {
 export default function (pi: ExtensionAPI) {
   let activeWindow: GlimpseWindow | null = null;
   let activeWaitingUIDismiss: (() => void) | null = null;
+  let preferredScope: "branch-diff" | "last-commit" | null = null;
 
   function closeActiveWindow(): void {
     if (activeWindow == null) return;
@@ -123,7 +129,7 @@ export default function (pi: ExtensionAPI) {
       return;
     }
 
-    const html = buildReviewHtml({ repoRoot, files, commits, branchBaseSha });
+    const html = buildReviewHtml({ repoRoot, files, commits, branchBaseSha, initialScope: preferredScope });
     const window = open(html, {
       width: 1680,
       height: 1020,
@@ -215,6 +221,12 @@ export default function (pi: ExtensionAPI) {
           const message = data as ReviewWindowMessage;
           if (isRequestFilePayload(message)) {
             void handleRequestFile(message);
+            return;
+          }
+          if (isScopeSelectedPayload(message)) {
+            if (message.scope === "branch-diff" || message.scope === "last-commit") {
+              preferredScope = message.scope;
+            }
             return;
           }
           if (isSubmitPayload(message) || isCancelPayload(message)) {

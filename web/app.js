@@ -1,14 +1,24 @@
 const reviewData = JSON.parse(document.getElementById("diff-review-data").textContent || "{}");
 
+function getInitialScope() {
+  if (reviewData.initialScope === "branch-diff" && reviewData.files.some((file) => file.inBranchDiff)) {
+    return "branch-diff";
+  }
+  if (reviewData.initialScope === "last-commit" && reviewData.files.some((file) => file.inLastCommit)) {
+    return "last-commit";
+  }
+  if (reviewData.files.some((file) => file.inGitDiff)) {
+    return "git-diff";
+  }
+  if (reviewData.files.some((file) => file.inLastCommit)) {
+    return "last-commit";
+  }
+  return reviewData.commits?.length > 0 ? "commit" : "all-files";
+}
+
 const state = {
   activeFileId: null,
-  currentScope: reviewData.files.some((file) => file.inGitDiff)
-    ? "git-diff"
-    : reviewData.files.some((file) => file.inLastCommit)
-      ? "last-commit"
-      : reviewData.commits?.length > 0
-        ? "commit"
-        : "all-files",
+  currentScope: getInitialScope(),
   comments: [],
   overallComment: "",
   hideUnchanged: false,
@@ -1065,6 +1075,9 @@ function switchScope(scope) {
   if (!hasScopeFiles[scope] || state.currentScope === scope) return;
   saveCurrentScrollPosition();
   state.currentScope = scope;
+  if ((scope === "branch-diff" || scope === "last-commit") && window.glimpse?.send) {
+    window.glimpse.send({ type: "scope-selected", scope });
+  }
   renderAll({ restoreFileScroll: true });
   const file = activeFile();
   if (file) ensureFileLoaded(file.id, state.currentScope);
