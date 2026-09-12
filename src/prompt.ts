@@ -18,16 +18,14 @@ function getCommentFilePath(file: ReviewFile | undefined, comment: DiffReviewCom
       ? file.branchDiff
       : comment.scope === "last-commit"
       ? file.lastCommit
-      : comment.scope === "commit" && comment.commitSha
-        ? file.commitComparisons[comment.commitSha]
-        : null;
-  return comparison?.displayPath ?? file.path;
+      : null;
+  return comparison?.displayPath ?? comment.displayPath ?? file.path;
 }
 
 function formatLocation(comment: DiffReviewComment, file: ReviewFile | undefined): string {
   const filePath = getCommentFilePath(file, comment);
-  const scopePrefix = comment.scope === "commit" && comment.commitSha
-    ? `[commit ${comment.commitSha.slice(0, 12)}] `
+  const scopePrefix = comment.scope === "commit" && comment.fromCommitSha && comment.toCommitSha
+    ? `[commits ${comment.fromCommitSha.slice(0, 12)}...${comment.toCommitSha.slice(0, 12)}] `
     : `[${formatScopeLabel(comment.scope)}] `;
 
   if (comment.side === "file" || comment.startLine == null) {

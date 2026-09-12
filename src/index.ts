@@ -1,7 +1,7 @@
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import { Key, matchesKey, truncateToWidth } from "@earendil-works/pi-tui";
 import { open, type GlimpseWindow } from "glimpseui";
-import { getReviewFileFingerprint, getReviewWindowData, loadReviewFileContents, loadReviewState, saveReviewState } from "./git.js";
+import { getReviewCommitRange, getReviewFileFingerprint, getReviewWindowData, loadReviewFileContents, loadReviewState, saveReviewState } from "./git.js";
 import { composeReviewPrompt } from "./prompt.js";
 import type {
   ReviewCancelPayload,
@@ -10,6 +10,7 @@ import type {
   ReviewFileContents,
   ReviewFileStatusPayload,
   ReviewHostMessage,
+  ReviewRequestCommitRangePayload,
   ReviewRequestFilePayload,
   ReviewScopeSelectedPayload,
   ReviewSubmitPayload,
@@ -27,6 +28,10 @@ function isCancelPayload(value: ReviewWindowMessage): value is ReviewCancelPaylo
 
 function isRequestFilePayload(value: ReviewWindowMessage): value is ReviewRequestFilePayload {
   return value.type === "request-file";
+}
+
+function isRequestCommitRangePayload(value: ReviewWindowMessage): value is ReviewRequestCommitRangePayload {
+  return value.type === "request-commit-range";
 }
 
 function isScopeSelectedPayload(value: ReviewWindowMessage): value is ReviewScopeSelectedPayload {
@@ -174,12 +179,12 @@ export default function (pi: ExtensionAPI) {
       window.send(`window.__reviewReceive(${payload});`);
     };
 
-    const loadContents = (file: ReviewFile, scope: ReviewRequestFilePayload["scope"], commitSha?: string): Promise<ReviewFileContents> => {
-      const cacheKey = `${scope}:${commitSha ?? ""}:${file.id}`;
+    const loadContents = (file: ReviewFile, scope: ReviewRequestFilePayload["scope"], comparison?: ReviewRequestFilePayload["comparison"], commitRange?: ReviewRequestFilePayload["commitRange"]): Promise<ReviewFileContents> => {
+      const cacheKey = `${scope}:${commitRange?.fromCommitSha ?? ""}:${commitRange?.toCommitSha ?? ""}:${file.id}`;
       const cached = contentCache.get(cacheKey);
       if (cached != null) return cached;
 
-      const pending = loadReviewFileContents(pi, repoRoot, file, scope, commitSha, branchBaseSha);
+      const pending = loadReviewFileContents(pi, repoRoot, file, scope, comparison, commitRange, branchBaseSha);
       contentCache.set(cacheKey, pending);
       return pending;
     };
@@ -214,20 +219,20 @@ export default function (pi: ExtensionAPI) {
               requestId: message.requestId,
               fileId: message.fileId,
               scope: message.scope,
-              commitSha: message.commitSha,
+              commitRange: message.commitRange,
               message: "Unknown file requested.",
             });
             return;
           }
 
           try {
-            const contents = await loadContents(file, message.scope, message.commitSha);
+            const contents = await loadContents(file, message.scope, message.comparison, message.commitRange);
             sendWindowMessage({
               type: "file-data",
               requestId: message.requestId,
               fileId: message.fileId,
               scope: message.scope,
-              commitSha: message.commitSha,
+              commitRange: message.commitRange,
               originalContent: contents.originalContent,
               modifiedContent: contents.modifiedContent,
             });
@@ -238,7 +243,7 @@ export default function (pi: ExtensionAPI) {
               requestId: message.requestId,
               fileId: message.fileId,
               scope: message.scope,
-              commitSha: message.commitSha,
+              commitRange: message.commitRange,
               message: messageText,
             });
           }
@@ -262,6 +267,21 @@ export default function (pi: ExtensionAPI) {
           const message = data as ReviewWindowMessage;
           if (isRequestFilePayload(message)) {
             void handleRequestFile(message);
+            return;
+          }
+          if (isRequestCommitRangePayload(message)) {
+            void getReviewCommitRange(pi, repoRoot, files, message.fromCommitSha, message.toCommitSha)
+              .then((range) => sendWindowMessage({ type: "commit-range-data", requestId: message.requestId, range }))
+              .catch((error: unknown) => {
+                const messageText = error instanceof Error ? error.message : String(error);
+                sendWindowMessage({
+                  type: "commit-range-error",
+                  requestId: message.requestId,
+                  fromCommitSha: message.fromCommitSha,
+                  toCommitSha: message.toCommitSha,
+                  message: messageText,
+                });
+              });
             return;
           }
           if (isScopeSelectedPayload(message)) {

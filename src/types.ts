@@ -17,6 +17,21 @@ export interface ReviewCommit {
   subject: string;
 }
 
+export interface ReviewCommitRange {
+  fromCommitSha: string;
+  toCommitSha: string;
+  baseCommitSha: string;
+}
+
+export interface ReviewCommitRangeFile {
+  fileId: string;
+  comparison: ReviewFileComparison;
+}
+
+export interface ReviewCommitRangeData extends ReviewCommitRange {
+  files: ReviewCommitRangeFile[];
+}
+
 export interface ReviewFile {
   id: string;
   path: string;
@@ -28,7 +43,6 @@ export interface ReviewFile {
   gitDiff: ReviewFileComparison | null;
   branchDiff: ReviewFileComparison | null;
   lastCommit: ReviewFileComparison | null;
-  commitComparisons: Record<string, ReviewFileComparison>;
 }
 
 export interface ReviewFileContents {
@@ -42,7 +56,9 @@ export interface DiffReviewComment {
   id: string;
   fileId: string;
   scope: ReviewScope;
-  commitSha?: string;
+  fromCommitSha?: string;
+  toCommitSha?: string;
+  displayPath?: string;
   side: CommentSide;
   startLine: number | null;
   endLine: number | null;
@@ -80,17 +96,25 @@ export interface ReviewRequestFilePayload {
   requestId: string;
   fileId: string;
   scope: ReviewScope;
-  commitSha?: string;
+  comparison?: ReviewFileComparison;
+  commitRange?: ReviewCommitRange;
 }
 
-export type ReviewWindowMessage = ReviewSubmitPayload | ReviewCancelPayload | ReviewScopeSelectedPayload | ReviewFileStatusPayload | ReviewDisplayOptionsPayload | ReviewRequestFilePayload;
+export interface ReviewRequestCommitRangePayload {
+  type: "request-commit-range";
+  requestId: string;
+  fromCommitSha: string;
+  toCommitSha: string;
+}
+
+export type ReviewWindowMessage = ReviewSubmitPayload | ReviewCancelPayload | ReviewScopeSelectedPayload | ReviewFileStatusPayload | ReviewDisplayOptionsPayload | ReviewRequestFilePayload | ReviewRequestCommitRangePayload;
 
 export interface ReviewFileDataMessage {
   type: "file-data";
   requestId: string;
   fileId: string;
   scope: ReviewScope;
-  commitSha?: string;
+  commitRange?: ReviewCommitRange;
   originalContent: string;
   modifiedContent: string;
 }
@@ -100,11 +124,25 @@ export interface ReviewFileErrorMessage {
   requestId: string;
   fileId: string;
   scope: ReviewScope;
-  commitSha?: string;
+  commitRange?: ReviewCommitRange;
   message: string;
 }
 
-export type ReviewHostMessage = ReviewFileDataMessage | ReviewFileErrorMessage;
+export interface ReviewCommitRangeDataMessage {
+  type: "commit-range-data";
+  requestId: string;
+  range: ReviewCommitRangeData;
+}
+
+export interface ReviewCommitRangeErrorMessage {
+  type: "commit-range-error";
+  requestId: string;
+  fromCommitSha: string;
+  toCommitSha: string;
+  message: string;
+}
+
+export type ReviewHostMessage = ReviewFileDataMessage | ReviewFileErrorMessage | ReviewCommitRangeDataMessage | ReviewCommitRangeErrorMessage;
 
 export interface ReviewWindowData {
   repoRoot: string;

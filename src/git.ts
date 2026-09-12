@@ -1,7 +1,15 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, extname, isAbsolute, join, resolve } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import type { ChangeStatus, ReviewFile, ReviewFileComparison, ReviewFileContents, ReviewScope } from "./types.js";
+import type {
+  ChangeStatus,
+  ReviewCommitRange,
+  ReviewCommitRangeData,
+  ReviewFile,
+  ReviewFileComparison,
+  ReviewFileContents,
+  ReviewScope,
+} from "./types.js";
 
 interface ChangedPath {
   status: ChangeStatus;
@@ -25,6 +33,8 @@ interface ReviewFileSeed {
   gitDiff: ReviewFileComparison | null;
   branchDiff: ReviewFileComparison | null;
   lastCommit: ReviewFileComparison | null;
+  // Retained while building initial file seeds so historical paths remain available
+  // for a subsequently selected commit range.
   commitComparisons: Record<string, ReviewFileComparison>;
 }
 
@@ -240,7 +250,6 @@ function createReviewFile(seed: ReviewFileSeed): ReviewFile {
     gitDiff: seed.gitDiff,
     branchDiff: seed.branchDiff,
     lastCommit: seed.lastCommit,
-    commitComparisons: seed.commitComparisons,
   };
 }
 
@@ -475,7 +484,21 @@ export async function getReviewWindowData(pi: ExtensionAPI, cwd: string): Promis
   return { repoRoot, files, commits, branchBaseSha };
 }
 
-export async function loadReviewFileContents(pi: ExtensionAPI, repoRoot: string, file: ReviewFile, scope: ReviewScope, commitSha?: string, branchBaseSha?: string | null): Promise<ReviewFileContents> {
+export async function getReviewCommitRange(pi: ExtensionAPI, repoRoot: string, files: ReviewFile[], fromCommitSha: string, toCommitSha: string): Promise<ReviewCommitRangeData> {
+  const baseCommitSha = (await runGit(pi, repoRoot, ["merge-base", fromCommitSha, toCommitSha])).trim();
+  const output = await runGit(pi, repoRoot, ["diff", "--find-renames", "-M", "--name-status", `${fromCommitSha}...${toCommitSha}`, "--"]);
+  const filesByPath = new Map(files.map((file) => [file.path, file]));
+  const rangeFiles = parseNameStatus(output)
+    .filter((change) => isReviewableFilePath(change.newPath ?? change.oldPath ?? ""))
+    .flatMap((change) => {
+      const file = filesByPath.get(change.newPath ?? "") ?? filesByPath.get(change.oldPath ?? "");
+      return file == null ? [] : [{ fileId: file.id, comparison: toComparison(change) }];
+    });
+
+  return { fromCommitSha, toCommitSha, baseCommitSha, files: rangeFiles };
+}
+
+export async function loadReviewFileContents(pi: ExtensionAPI, repoRoot: string, file: ReviewFile, scope: ReviewScope, comparison?: ReviewFileComparison, commitRange?: ReviewCommitRange, branchBaseSha?: string | null): Promise<ReviewFileContents> {
   if (scope === "all-files") {
     const content = file.hasWorkingTreeFile ? await getWorkingTreeContent(repoRoot, file.path) : "";
     return {
@@ -484,14 +507,14 @@ export async function loadReviewFileContents(pi: ExtensionAPI, repoRoot: string,
     };
   }
 
-  const comparison = scope === "git-diff"
+  const selectedComparison = scope === "git-diff"
     ? file.gitDiff
     : scope === "branch-diff"
       ? file.branchDiff
-      : scope === "commit" && commitSha
-        ? file.commitComparisons[commitSha]
-        : file.lastCommit;
-  if (comparison == null) {
+      : scope === "last-commit"
+        ? file.lastCommit
+        : comparison ?? null;
+  if (selectedComparison == null) {
     return {
       originalContent: "",
       modifiedContent: "",
@@ -512,20 +535,20 @@ export async function loadReviewFileContents(pi: ExtensionAPI, repoRoot: string,
     }
     originalRevision = branchBaseSha;
     modifiedRevision = null;
-  } else if (scope === "commit" && commitSha != null) {
-    originalRevision = `${commitSha}^`;
-    modifiedRevision = commitSha;
+  } else if (scope === "commit" && commitRange != null) {
+    originalRevision = commitRange.baseCommitSha;
+    modifiedRevision = commitRange.toCommitSha;
   } else {
     originalRevision = "HEAD^";
     modifiedRevision = "HEAD";
   }
 
-  const originalContent = comparison.oldPath == null ? "" : await getRevisionContent(pi, repoRoot, originalRevision, comparison.oldPath);
-  const modifiedContent = comparison.newPath == null
+  const originalContent = selectedComparison.oldPath == null ? "" : await getRevisionContent(pi, repoRoot, originalRevision, selectedComparison.oldPath);
+  const modifiedContent = selectedComparison.newPath == null
     ? ""
     : modifiedRevision == null
-      ? await getWorkingTreeContent(repoRoot, comparison.newPath)
-      : await getRevisionContent(pi, repoRoot, modifiedRevision, comparison.newPath);
+      ? await getWorkingTreeContent(repoRoot, selectedComparison.newPath)
+      : await getRevisionContent(pi, repoRoot, modifiedRevision, selectedComparison.newPath);
 
   return {
     originalContent,
